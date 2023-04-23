@@ -4,6 +4,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 type headers struct {
@@ -12,6 +13,10 @@ type headers struct {
 }
 
 type option func(*headers) error
+
+func init() {
+	rand.Seed(time.Now().Unix())
+}
 
 func NewHeaders(opts ...option) (*headers, error) {
 	h := &headers{
@@ -59,23 +64,23 @@ func Headers() map[string][]string {
 		panic(err)
 	}
 	if rand.Intn(2) == 1 {
-		h.Firefox()
+		h.firefox()
 	} else {
-		h.Chrome()
+		h.chrome()
 	}
 	return h.HeaderMap
 }
 
 func (h *headers) Headers() map[string][]string {
 	if rand.Intn(2) == 1 {
-		h.Firefox()
+		h.firefox()
 	} else {
-		h.Chrome()
+		h.chrome()
 	}
 	return h.HeaderMap
 }
 
-func (h *headers) Firefox() {
+func (h *headers) firefox() {
 	uAgent := h.ffUA()
 	h.HeaderMap = http.Header{
 		"User-Agent":                {uAgent},
@@ -92,7 +97,7 @@ func (h *headers) Firefox() {
 	}
 }
 
-func (h *headers) Chrome() {
+func (h *headers) chrome() {
 	uAgent := h.chromeUA()
 	h.HeaderMap = http.Header{
 		"Connection":                {"keep-alive"},
