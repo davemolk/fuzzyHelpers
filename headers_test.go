@@ -116,6 +116,19 @@ func TestWithOSDefaultWindows(t *testing.T) {
 	}
 }
 
+func TestWithOSAny(t *testing.T) {
+	t.Parallel()
+	h, err := NewHeaders(
+		WithOS("any"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if h.osys != "l" && h.osys != "m" && h.osys != "w" {
+		t.Errorf("wanted l, m, or w, got %s", h.osys)
+	}
+}
+
 func TestWithOSInUA(t *testing.T) {
 	t.Parallel()
 	h, err := NewHeaders(

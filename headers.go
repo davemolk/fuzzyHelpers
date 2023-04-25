@@ -1,7 +1,9 @@
 package fuzzyHelpers
 
 import (
+	"log"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"time"
 )
@@ -11,6 +13,10 @@ type headers struct {
 	headerMap map[string][]string
 }
 
+// not returning any errors at the moment
+// in the interest of providing something that
+// works, but leaving as an option for future
+// use
 type option func(*headers) error
 
 func init() {
@@ -36,6 +42,8 @@ func WithOS(osys string) option {
 		switch osys {
 		case "l", "m", "w":
 			h.osys = osys
+		case "any":
+			h.osys = h.randOS()
 		default:
 			// prob get rid of error in option if i'm
 			// just going to enter defaults on errors...
@@ -43,6 +51,11 @@ func WithOS(osys string) option {
 		}
 		return nil
 	}
+}
+
+func (h *headers) randOS() string {
+	options := []string{"l", "m", "w"}
+	return options[rand.Intn(3)]
 }
 
 func WithURL(s string) option {
@@ -69,7 +82,23 @@ func (h *headers) Headers() map[string][]string {
 func Headers() map[string][]string {
 	h, err := NewHeaders()
 	if err != nil {
-		panic(err)
+		// provide something to work with
+		log.Println("experienced an error, providing default header map")
+		return http.Header{
+			"Connection": {"keep-alive"},
+			"Cache-Control": {"max-age=0"},
+			"sec-ch-ua": {`"Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"`},
+			"sec-ch-ua-mobile": {"?0"},
+			"Upgrade-Insecure-Requests": {"1"},
+			"User-Agent": {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"},
+			"Accept": {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"},
+			"Sec-Fetch-Site": {"none"},
+			"Sec-Fetch-Mode": {"navigate"},
+			"Sec-Fetch-User": {"?1"},
+			"Sec-Fetch-Dest": {"document"},
+			"Accept-Language": {"en-US,en;q=0.5"},
+			"sec-ch-ua-platform": {"Windows"},
+		}
 	}
 	return h.Headers()
 }
