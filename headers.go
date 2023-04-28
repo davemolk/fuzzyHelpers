@@ -1,9 +1,7 @@
 package fuzzyHelpers
 
 import (
-	"log"
 	"math/rand"
-	"net/http"
 	"net/url"
 	"time"
 )
@@ -13,43 +11,33 @@ type headers struct {
 	headerMap map[string][]string
 }
 
-// not returning any errors at the moment
-// in the interest of providing something that
-// works, but leaving as an option for future
-// use
-type option func(*headers) error
+type optionHeaders func(*headers)
 
 func init() {
 	rand.Seed(time.Now().Unix())
 }
 
-func NewHeaders(opts ...option) (*headers, error) {
+func NewHeaders(opts ...optionHeaders) *headers {
 	h := &headers{
 		osys:      "w",
 		headerMap: make(map[string][]string),
 	}
 	for _, opt := range opts {
-		err := opt(h)
-		if err != nil {
-			return &headers{}, err
-		}
+		opt(h)
 	}
-	return h, nil
+	return h
 }
 
-func WithOS(osys string) option {
-	return func(h *headers) error {
+func WithOS(osys string) optionHeaders {
+	return func(h *headers) {
 		switch osys {
 		case "l", "m", "w":
 			h.osys = osys
 		case "any":
 			h.osys = h.randOS()
 		default:
-			// prob get rid of error in option if i'm
-			// just going to enter defaults on errors...
 			h.osys = "w"
 		}
-		return nil
 	}
 }
 
@@ -58,15 +46,14 @@ func (h *headers) randOS() string {
 	return options[rand.Intn(3)]
 }
 
-func WithURL(s string) option {
-	return func(h *headers) error {
+func WithURL(s string) optionHeaders {
+	return func(h *headers) {
 		u, err := url.ParseRequestURI(s)
 		if err != nil {
 			// don't set Host on headers
-			return nil
+			return
 		}
 		h.headerMap["Host"] = []string{u.Host}
-		return nil
 	}
 }
 
@@ -80,27 +67,7 @@ func (h *headers) Headers() map[string][]string {
 }
 
 func Headers() map[string][]string {
-	h, err := NewHeaders()
-	if err != nil {
-		// provide something to work with
-		log.Println("experienced an error, providing default header map")
-		return http.Header{
-			"Connection": {"keep-alive"},
-			"Cache-Control": {"max-age=0"},
-			"sec-ch-ua": {`"Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"`},
-			"sec-ch-ua-mobile": {"?0"},
-			"Upgrade-Insecure-Requests": {"1"},
-			"User-Agent": {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"},
-			"Accept": {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"},
-			"Sec-Fetch-Site": {"none"},
-			"Sec-Fetch-Mode": {"navigate"},
-			"Sec-Fetch-User": {"?1"},
-			"Sec-Fetch-Dest": {"document"},
-			"Accept-Language": {"en-US,en;q=0.5"},
-			"sec-ch-ua-platform": {"Windows"},
-		}
-	}
-	return h.Headers()
+	return NewHeaders().Headers()
 }
 
 func (h *headers) firefox() {
@@ -124,15 +91,6 @@ func (h *headers) chrome() {
 	h.headerMap["Cache-Control"] = []string{"max-age=0"}
 	h.headerMap["sec-ch-ua"] = []string{`"Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"`}
 	h.headerMap["sec-ch-ua-mobile"] = []string{"?0"}
-	h.headerMap["Upgrade-Insecure-Requests"] = []string{"1"}
-	h.headerMap["User-Agent"] = []string{uAgent}
-	h.headerMap["Accept"] = []string{"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"}
-	h.headerMap["Sec-Fetch-Site"] = []string{"none"}
-	h.headerMap["Sec-Fetch-Mode"] = []string{"navigate"}
-	h.headerMap["Sec-Fetch-User"] = []string{"?1"}
-	h.headerMap["Sec-Fetch-Dest"] = []string{"document"}
-	h.headerMap["Accept-Language"] = []string{"en-US,en;q=0.5"}
-
 	switch h.osys {
 	case "m":
 		h.headerMap["sec-ch-ua-platform"] = []string{"Macintosh"}
@@ -141,6 +99,14 @@ func (h *headers) chrome() {
 	default:
 		h.headerMap["sec-ch-ua-platform"] = []string{"Windows"}
 	}
+	h.headerMap["Upgrade-Insecure-Requests"] = []string{"1"}
+	h.headerMap["User-Agent"] = []string{uAgent}
+	h.headerMap["Accept"] = []string{"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"}
+	h.headerMap["Sec-Fetch-Site"] = []string{"none"}
+	h.headerMap["Sec-Fetch-Mode"] = []string{"navigate"}
+	h.headerMap["Sec-Fetch-User"] = []string{"?1"}
+	h.headerMap["Sec-Fetch-Dest"] = []string{"document"}
+	h.headerMap["Accept-Language"] = []string{"en-US,en;q=0.5"}
 }
 
 func (h *headers) ffUA() string {

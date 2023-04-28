@@ -6,10 +6,7 @@ import (
 
 func TestChrome(t *testing.T) {
 	t.Parallel()
-	h, err := NewHeaders()
-	if err != nil {
-		t.Fatal(err)
-	}
+	h := NewHeaders()
 
 	t.Run("no headers at initialization", func(t *testing.T) {
 		want := 0
@@ -30,10 +27,7 @@ func TestChrome(t *testing.T) {
 
 func TestFirefox(t *testing.T) {
 	t.Parallel()
-	h, err := NewHeaders()
-	if err != nil {
-		t.Fatal(err)
-	}
+	h := NewHeaders()
 
 	t.Run("no headers at initialization", func(t *testing.T) {
 		want := 0
@@ -54,12 +48,9 @@ func TestFirefox(t *testing.T) {
 
 func TestWithURL(t *testing.T) {
 	t.Parallel()
-	h, err := NewHeaders(
+	h := NewHeaders(
 		WithURL("https://example.com/foo"),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
 	foo := h.Headers()
 	want := "example.com"
 	got := foo["Host"][0]
@@ -70,12 +61,9 @@ func TestWithURL(t *testing.T) {
 
 func TestWithURLNoURLIfErr(t *testing.T) {
 	t.Parallel()
-	h, err := NewHeaders(
+	h := NewHeaders(
 		WithURL("kljkl"),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
 	foo := h.Headers()
 	if v, ok := foo["Host"]; ok {
 		t.Errorf("wanted no host header, got %v", v)
@@ -84,12 +72,9 @@ func TestWithURLNoURLIfErr(t *testing.T) {
 
 func TestWithOSInHeader(t *testing.T) {
 	t.Parallel()
-	h, err := NewHeaders(
+	h := NewHeaders(
 		WithOS("m"),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
 	// check chrome for sec-ch-ua-platform header
 	h.chrome()
 	want := "Macintosh"
@@ -101,12 +86,9 @@ func TestWithOSInHeader(t *testing.T) {
 
 func TestWithOSDefaultWindows(t *testing.T) {
 	t.Parallel()
-	h, err := NewHeaders(
+	h := NewHeaders(
 		WithOS("foo"),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
 	// check chrome for sec-ch-ua-platform header
 	h.chrome()
 	want := "Windows"
@@ -118,12 +100,9 @@ func TestWithOSDefaultWindows(t *testing.T) {
 
 func TestWithOSAny(t *testing.T) {
 	t.Parallel()
-	h, err := NewHeaders(
+	h := NewHeaders(
 		WithOS("any"),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
 	if h.osys != "l" && h.osys != "m" && h.osys != "w" {
 		t.Errorf("wanted l, m, or w, got %s", h.osys)
 	}
@@ -131,12 +110,9 @@ func TestWithOSAny(t *testing.T) {
 
 func TestWithOSInUA(t *testing.T) {
 	t.Parallel()
-	h, err := NewHeaders(
+	h := NewHeaders(
 		WithOS("m"),
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
 	h.chrome()
 	ua := []string{
 		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
