@@ -7,9 +7,7 @@ import (
 	"time"
 )
 
-type client struct {
-	Client *http.Client
-	// options
+type clientOptions struct {
 	allowRedirects bool
 	connections    int
 	noSkip         bool
@@ -17,24 +15,23 @@ type client struct {
 	timeout        int
 }
 
-type optionClient func(*client)
+type optionClient func(*clientOptions)
 
-func NewClient(opts ...optionClient) *client {
+func NewClient(opts ...optionClient) *http.Client {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.MaxIdleConnsPerHost = 30
 	tr.MaxConnsPerHost = 30
 	tr.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,
 	}
-	c := &client{
-		Client: &http.Client{
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-			Timeout:   5000 * time.Millisecond,
-			Transport: tr,
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
 		},
+		Timeout:   5000 * time.Millisecond,
+		Transport: tr,
 	}
+	c := &clientOptions{}
 	for _, opt := range opts {
 		opt(c)
 	}
@@ -55,16 +52,16 @@ func NewClient(opts ...optionClient) *client {
 		}
 	}
 	if c.allowRedirects {
-		c.Client.CheckRedirect = nil
+		client.CheckRedirect = nil
 	}
 	if c.timeout > 0 {
-		c.Client.Timeout = time.Duration(c.timeout) * time.Millisecond
+		client.Timeout = time.Duration(c.timeout) * time.Millisecond
 	}
-	return c
+	return client
 }
 
 func WithConnections(n int) optionClient {
-	return func(c *client) {
+	return func(c *clientOptions) {
 		if n <= 0 {
 			return
 		}
@@ -73,13 +70,13 @@ func WithConnections(n int) optionClient {
 }
 
 func WithNoSkip(v bool) optionClient {
-	return func(c *client) {
+	return func(c *clientOptions) {
 		c.noSkip = true
 	}
 }
 
 func WithProxy(p string) optionClient {
-	return func(c *client) {
+	return func(c *clientOptions) {
 		if p == "" {
 			return
 		}
@@ -88,16 +85,20 @@ func WithProxy(p string) optionClient {
 }
 
 func WithAllowRedirects(r bool) optionClient {
-	return func(c *client) {
+	return func(c *clientOptions) {
 		c.allowRedirects = r
 	}
 }
 
 func WithTimeout(t int) optionClient {
-	return func(c *client) {
+	return func(c *clientOptions) {
 		if t <= 0 {
 			return
 		}
 		c.timeout = t
 	}
+}
+
+func Client() *http.Client {
+	return NewClient()
 }

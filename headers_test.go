@@ -59,10 +59,10 @@ func TestWithURL(t *testing.T) {
 	}
 }
 
-func TestWithURLNoURLIfErr(t *testing.T) {
+func TestBadWithURLInput(t *testing.T) {
 	t.Parallel()
 	h := NewHeaders(
-		WithURL("kljkl"),
+		WithURL("kl klsajdf; jkl"),
 	)
 	foo := h.Headers()
 	if v, ok := foo["Host"]; ok {
@@ -105,6 +105,26 @@ func TestWithOSAny(t *testing.T) {
 	)
 	if h.osys != "l" && h.osys != "m" && h.osys != "w" {
 		t.Errorf("wanted l, m, or w, got %s", h.osys)
+	}
+}
+
+func TestCaseInsensitiveOS(t *testing.T) {
+	t.Parallel()
+	h := NewHeaders(
+		WithOS("M"),
+	)
+	if h.osys != "m" {
+		t.Errorf("got %s wanted 'm'", h.osys)
+	}
+}
+
+func TestBadOSInputUsesDefault(t *testing.T) {
+	t.Parallel()
+	h := NewHeaders(
+		WithOS("foo"),
+	)
+	if h.osys != "w" {
+		t.Errorf("got %s wanted 'w'", h.osys)
 	}
 }
 
