@@ -8,21 +8,33 @@ import (
 )
 
 type headers struct {
-	customHeaders bool
-	osys          string
-	headerMap     headerMap
+	chromeOnly      bool
+	customHeaders   bool
+	ffOnly          bool
+	osys            string
+	suppressHeaders []string
+	headerMap       headerMap
 }
 
 type optionHeaders func(*headers)
 
 type headerMap map[string][]string
 
-func (hm headerMap) Add(k, v string) {
+func (hm headerMap) add(k, v string) {
 	// don't want to overwrite custom headers
 	if _, ok := hm[k]; ok {
 		return
 	}
 	hm[k] = []string{v}
+}
+
+func (h *headers) suppressOrSet(k, v string) {
+	for _, v := range h.suppressHeaders {
+		if k == v {
+			return
+		}
+	}
+	h.headerMap[k] = []string{v}
 }
 
 func init() {
@@ -72,6 +84,16 @@ func WithCustomHeaders(data string) optionHeaders {
 	}
 }
 
+func SuppressHeaders(data string) optionHeaders {
+	return func(h *headers) {
+		if len(data) == 0 {
+			return
+		}
+		opts := strings.Split(data, " ")
+		h.suppressHeaders = opts
+	}
+}
+
 func (h *headers) randOS() string {
 	options := []string{"l", "m", "w"}
 	return options[rand.Intn(3)]
@@ -88,10 +110,27 @@ func WithURL(s string) optionHeaders {
 	}
 }
 
+func ChromeOnly(b bool) optionHeaders {
+	return func(h *headers) {
+		h.chromeOnly = b
+	}
+}
+
+func FirefoxOnly(b bool) optionHeaders {
+	return func(h *headers) {
+		h.ffOnly = b
+	}
+}
+
 func (h *headers) Headers() map[string][]string {
-	if rand.Intn(2) == 1 {
+	switch {
+	case h.chromeOnly:
+		h.chrome()
+	case h.ffOnly:
 		h.firefox()
-	} else {
+	case rand.Intn(2) == 1:
+		h.firefox()
+	default:
 		h.chrome()
 	}
 	return h.headerMap
@@ -104,18 +143,42 @@ func Headers() map[string][]string {
 func (h *headers) firefox() {
 	uAgent := h.ffUA()
 	switch {
+	case h.customHeaders && len(h.suppressHeaders) > 0:
+		h.suppressOrSet("User-Agent", uAgent)
+		h.suppressOrSet("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+		h.suppressOrSet("Accept-Language", "en-US,en;q=0.5")
+		h.suppressOrSet("DNT", "1")
+		h.suppressOrSet("Connection", "keep-alive")
+		h.suppressOrSet("Upgrade-Insecure-Requests", "1")
+		h.suppressOrSet("Sec-Fetch-Dest", "document")
+		h.suppressOrSet("Sec-Fetch-Mode", "navigate")
+		h.suppressOrSet("Sec-Fetch-Site", "none")
+		h.suppressOrSet("Sec-Fetch-User", "?1")
+		h.suppressOrSet("Sec-GCP", "1")
 	case h.customHeaders:
-		h.headerMap.Add("User-Agent", uAgent)
-		h.headerMap.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-		h.headerMap.Add("Accept-Language", "en-US,en;q=0.5")
-		h.headerMap.Add("DNT", "1")
-		h.headerMap.Add("Connection", "keep-alive")
-		h.headerMap.Add("Upgrade-Insecure-Requests", "1")
-		h.headerMap.Add("Sec-Fetch-Dest", "document")
-		h.headerMap.Add("Sec-Fetch-Mode", "navigate")
-		h.headerMap.Add("Sec-Fetch-Site", "none")
-		h.headerMap.Add("Sec-Fetch-User", "?1")
-		h.headerMap.Add("Sec-GCP", "1")
+		h.headerMap.add("User-Agent", uAgent)
+		h.headerMap.add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+		h.headerMap.add("Accept-Language", "en-US,en;q=0.5")
+		h.headerMap.add("DNT", "1")
+		h.headerMap.add("Connection", "keep-alive")
+		h.headerMap.add("Upgrade-Insecure-Requests", "1")
+		h.headerMap.add("Sec-Fetch-Dest", "document")
+		h.headerMap.add("Sec-Fetch-Mode", "navigate")
+		h.headerMap.add("Sec-Fetch-Site", "none")
+		h.headerMap.add("Sec-Fetch-User", "?1")
+		h.headerMap.add("Sec-GCP", "1")
+	case len(h.suppressHeaders) > 0:
+		h.suppressOrSet("User-Agent", uAgent)
+		h.suppressOrSet("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+		h.suppressOrSet("Accept-Language", "en-US,en;q=0.5")
+		h.suppressOrSet("DNT", "1")
+		h.suppressOrSet("Connection", "keep-alive")
+		h.suppressOrSet("Upgrade-Insecure-Requests", "1")
+		h.suppressOrSet("Sec-Fetch-Dest", "document")
+		h.suppressOrSet("Sec-Fetch-Mode", "navigate")
+		h.suppressOrSet("Sec-Fetch-Site", "none")
+		h.suppressOrSet("Sec-Fetch-User", "?1")
+		h.suppressOrSet("Sec-GCP", "1")
 	default:
 		h.headerMap["User-Agent"] = []string{uAgent}
 		h.headerMap["Accept"] = []string{"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"}
@@ -134,27 +197,69 @@ func (h *headers) firefox() {
 func (h *headers) chrome() {
 	uAgent := h.chromeUA()
 	switch {
-	case h.customHeaders:
-		h.headerMap.Add("Connection", "keep-alive")
-		h.headerMap.Add("Cache-Control", "max-age=0")
-		h.headerMap.Add("sec-ch-ua", `"Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"`)
-		h.headerMap.Add("sec-ch-ua-mobile", "?0")
+	case h.customHeaders && len(h.suppressHeaders) > 0:
+		h.suppressOrSet("Connection", "keep-alive")
+		h.suppressOrSet("Cache-Control", "max-age=0")
+		h.suppressOrSet("sec-ch-ua", `"Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"`)
+		h.suppressOrSet("sec-ch-ua-mobile", "?0")
 		switch h.osys {
 		case "m":
-			h.headerMap.Add("sec-ch-ua-platform", "Macintosh")
+			h.suppressOrSet("sec-ch-ua-platform", "Macintosh")
 		case "l":
-			h.headerMap.Add("sec-ch-ua-platform", "Linux")
+			h.suppressOrSet("sec-ch-ua-platform", "Linux")
 		default:
-			h.headerMap.Add("sec-ch-ua-platform", "Windows")
+			h.suppressOrSet("sec-ch-ua-platform", "Windows")
 		}
-		h.headerMap.Add("Upgrade-Insecure-Requests", "1")
-		h.headerMap.Add("User-Agent", uAgent)
-		h.headerMap.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-		h.headerMap.Add("Sec-Fetch-Site", "none")
-		h.headerMap.Add("Sec-Fetch-Mode", "navigate")
-		h.headerMap.Add("Sec-Fetch-User", "?1")
-		h.headerMap.Add("Sec-Fetch-Dest", "document")
-		h.headerMap.Add("Accept-Language", "en-US,en;q=0.5")
+		h.suppressOrSet("Upgrade-Insecure-Requests", "1")
+		h.suppressOrSet("User-Agent", uAgent)
+		h.suppressOrSet("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+		h.suppressOrSet("Sec-Fetch-Site", "none")
+		h.suppressOrSet("Sec-Fetch-Mode", "navigate")
+		h.suppressOrSet("Sec-Fetch-User", "?1")
+		h.suppressOrSet("Sec-Fetch-Dest", "document")
+		h.suppressOrSet("Accept-Language", "en-US,en;q=0.5")
+	case h.customHeaders:
+		h.headerMap.add("Connection", "keep-alive")
+		h.headerMap.add("Cache-Control", "max-age=0")
+		h.headerMap.add("sec-ch-ua", `"Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"`)
+		h.headerMap.add("sec-ch-ua-mobile", "?0")
+		switch h.osys {
+		case "m":
+			h.headerMap.add("sec-ch-ua-platform", "Macintosh")
+		case "l":
+			h.headerMap.add("sec-ch-ua-platform", "Linux")
+		default:
+			h.headerMap.add("sec-ch-ua-platform", "Windows")
+		}
+		h.headerMap.add("Upgrade-Insecure-Requests", "1")
+		h.headerMap.add("User-Agent", uAgent)
+		h.headerMap.add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+		h.headerMap.add("Sec-Fetch-Site", "none")
+		h.headerMap.add("Sec-Fetch-Mode", "navigate")
+		h.headerMap.add("Sec-Fetch-User", "?1")
+		h.headerMap.add("Sec-Fetch-Dest", "document")
+		h.headerMap.add("Accept-Language", "en-US,en;q=0.5")
+	case len(h.suppressHeaders) > 0:
+		h.suppressOrSet("Connection", "keep-alive")
+		h.suppressOrSet("Cache-Control", "max-age=0")
+		h.suppressOrSet("sec-ch-ua", `"Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"`)
+		h.suppressOrSet("sec-ch-ua-mobile", "?0")
+		switch h.osys {
+		case "m":
+			h.suppressOrSet("sec-ch-ua-platform", "Macintosh")
+		case "l":
+			h.suppressOrSet("sec-ch-ua-platform", "Linux")
+		default:
+			h.suppressOrSet("sec-ch-ua-platform", "Windows")
+		}
+		h.suppressOrSet("Upgrade-Insecure-Requests", "1")
+		h.suppressOrSet("User-Agent", uAgent)
+		h.suppressOrSet("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
+		h.suppressOrSet("Sec-Fetch-Site", "none")
+		h.suppressOrSet("Sec-Fetch-Mode", "navigate")
+		h.suppressOrSet("Sec-Fetch-User", "?1")
+		h.suppressOrSet("Sec-Fetch-Dest", "document")
+		h.suppressOrSet("Accept-Language", "en-US,en;q=0.5")
 	default:
 		h.headerMap["Connection"] = []string{"keep-alive"}
 		h.headerMap["Cache-Control"] = []string{"max-age=0"}

@@ -29,6 +29,11 @@ h := fuzzyHelpers.NewHeaders(
     fuzzyHelpers.WithOS("any"),
     // will include a "Host" header
     fuzzyHelpers.WithURL(url),
+    // include custom header(s)
+    // format: space-separated key=value
+    // this gives the famous 'foo' and 'go' headers 
+    // with values 'bar' and 'pher', respectively
+    fuzzyHelpers.WithCustomHeaders("foo=bar go=pher"),
 )
 
 // call Headers to generate
@@ -81,7 +86,7 @@ fuzzyHelpers provides a client with the following customized defaults
     MaxIdleConnsPerHost = 30
     MaxConnsPerHost = 30
     InsecureSkipVerify = true
-    Timeout = 5000*time.Millisecond
+    Timeout = 10000*time.Millisecond
     CheckRedirect = func(req *http.Request, via []*http.Request) error {
                         return http.ErrUseLastResponse
                     }
@@ -94,6 +99,19 @@ header options:
         possible values are "l, m, w, or any"
         "any" will select randomly between l, m, and w
         default value is "w" 
+  WithCustomHeaders
+        include custom header(s) as space-separated key=value
+        e.g. WithCustomHeaders("foo=bar go=pher")
+        giving 'foo' and 'go' headers the values 'bar' and 'pher'.
+        note: custom headers are not overwritten by default values
+  SuppressHeaders
+        include space-separated header(s) to suppress from request
+  WithURL
+        include the request url for fuzzyHelper to set the Host header
+  ChromeOnly
+        only use chrome headers
+  FirefoxOnly
+        only use firefox headers
 
 client options
   WithConnections
@@ -105,6 +123,8 @@ client options
     	pass in a proxy
   WithAllowedRedirects
     	pass in true if you want to allow redirects
+  WithTimeout
+        measured in ms
 ```
 ### note
 Go unfortunately doesn't preserve header order, so if that's important to you and what you're up to, you'll need to look elsewhere. 

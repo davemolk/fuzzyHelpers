@@ -28,7 +28,7 @@ func NewClient(opts ...optionClient) *http.Client {
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
-		Timeout:   5000 * time.Millisecond,
+		Timeout:   10000 * time.Millisecond,
 		Transport: tr,
 	}
 	c := &clientOptions{}

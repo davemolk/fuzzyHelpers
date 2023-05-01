@@ -149,7 +149,6 @@ func TestWithOSInUA(t *testing.T) {
 	if !assertCorrectUA(t, h.headerMap["User-Agent"][0], ua) {
 		t.Errorf("wanted %s to be a Macintosh ua", h.headerMap["User-Agent"][0])
 	}
-
 }
 
 func assertCorrectUA(t *testing.T, ua string, possible []string) bool {
@@ -165,7 +164,7 @@ func assertCorrectUA(t *testing.T, ua string, possible []string) bool {
 func TestHeaders(t *testing.T) {
 	t.Parallel()
 	headers := Headers()
-	t.Run("success", func(t *testing.T) {
+	t.Run("got headers", func(t *testing.T) {
 		if len(headers) == 0 {
 			t.Errorf("want headers, got none")
 		}
@@ -180,4 +179,93 @@ func TestHeaders(t *testing.T) {
 			t.Errorf("number of headers was %d, wanted 11 or 13", len(headers))
 		}
 	})
+}
+
+func TestCustomHeaders(t *testing.T) {
+	t.Parallel()
+	h := NewHeaders(
+		WithCustomHeaders("Host=example.com User-Agent=foobar"),
+	)
+	headers := h.Headers()
+	t.Run("got headers", func(t *testing.T) {
+		if len(headers) == 0 {
+			t.Errorf("wanted headers, got none")
+		}
+	})
+	t.Run("set custom host", func(t *testing.T) {
+		if headers["Host"][0] != "example.com" {
+			t.Errorf("got %s wanted %q", headers["Host"][0], "example.com")
+		}
+	})
+	t.Run("custom user agent isn't overwritten", func(t *testing.T) {
+		if headers["User-Agent"][0] != "foobar" {
+			t.Errorf("got %s wanted %q", headers["User-Agent"][0], "foobar")
+		}
+	})
+	t.Run("correct number of headers", func(t *testing.T) {
+		// 11 or 13 as default plus the Host header
+		if len(headers) != 12 && len(headers) != 14 {
+			t.Errorf("number of headers was %d, wanted 12 or 14", len(headers))
+		}
+	})
+}
+
+func TestSuppressHeaders(t *testing.T) {
+	t.Parallel()
+	h := NewHeaders(
+		SuppressHeaders("User-Agent"),
+	)
+	headers := h.Headers()
+	if v, ok := headers["User-Agent"]; ok {
+		t.Errorf("got %s wanted no header", v)
+	}
+}
+
+func TestSuppressMultipleHeaders(t *testing.T) {
+	t.Parallel()
+	h := NewHeaders(
+		SuppressHeaders("User-Agent Accept"),
+	)
+	headers := h.Headers()
+	if v, ok := headers["User-Agent"]; ok {
+		t.Errorf("got %s wanted no User-Agent header", v)
+	}
+	if v, ok := headers["Accept"]; ok {
+		t.Errorf("got %s wanted no Accept header", v)
+	}
+}
+
+func TestChromeOnly(t *testing.T) {
+	t.Parallel()
+	h := NewHeaders(
+		ChromeOnly(true),
+	)
+	headers := h.Headers()
+	// ff doesn't have this header
+	if _, ok := headers["sec-ch-ua-platform"]; !ok {
+		t.Error("wanted 'sec-ch-ua-platform' header but got none")
+	}
+}
+
+func TestFirefoxOnly(t *testing.T) {
+	t.Parallel()
+	h := NewHeaders(
+		FirefoxOnly(true),
+	)
+	headers := h.Headers()
+	if v, ok := headers["sec-ch-ua-platform"]; ok {
+		t.Errorf("got %v but wanted no 'sec-ch-ua-platform' header", v)
+	}
+}
+
+func TestChromePriority(t *testing.T) {
+	t.Parallel()
+	h := NewHeaders(
+		FirefoxOnly(true),
+		ChromeOnly(true),
+	)
+	headers := h.Headers()
+	if _, ok := headers["sec-ch-ua-platform"]; !ok {
+		t.Error("wanted 'sec-ch-ua-platform' header but got none")
+	}
 }
