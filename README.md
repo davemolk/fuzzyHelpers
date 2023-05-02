@@ -1,6 +1,9 @@
 # fuzzyHelpers
-* provides headers that mimic chrome and firefox 
+* provides request headers that mimic chrome and firefox
 * provides a client with helpful defaults for fuzzing a site
+
+# installation
+`go get github.com/davemolk/fuzzyHelpers@latest`
 
 # basic usage
 ```
@@ -13,7 +16,7 @@ req.Header = fuzzyHelpers.Headers()
 resp, err := fuzzyHelpers.Client().Do(req)
 ```
 
-# using options
+# using options to customize behavior
 ```
 url := "https://example.com"
 req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -27,16 +30,16 @@ h := fuzzyHelpers.NewHeaders(
     // matching "sec-ch-ua-platform" header if returning
     // a set of chrome headers
     fuzzyHelpers.WithOS("any"),
-    // will include a "Host" header
+    // will include a "Host" header derived from url
     fuzzyHelpers.WithURL(url),
-    // include custom header(s)
-    // format: space-separated key=value
-    // this gives the famous 'foo' and 'go' headers 
+    // include custom header(s) as space-separated key=value
+    // below gives the famous 'foo' and 'go' headers 
     // with values 'bar' and 'pher', respectively
     fuzzyHelpers.WithCustomHeaders("foo=bar go=pher"),
 )
 
-// call Headers to generate
+// call Headers to generate (will choose chrome or firefox randomly
+// unless specified by you via ChromeOnly or FirefoxOnly options)
 req.Header = h.Headers()
 
 c := fuzzyHelpers.NewClient(
@@ -49,8 +52,7 @@ c := fuzzyHelpers.NewClient(
 resp, err := c.Do(req)
 etc...
 ```
-### headers overview
-fuzzyHelpers selects randomly between firefox headers and chrome headers. use WithOS to provide choose an appropriate (random) user agent and sec-ch-ua-platform header (if chrome is selected). 
+### headers defaults
 ```
 firefox
     User-Agent = a random ua
@@ -80,7 +82,7 @@ chrome
     Sec-Fetch-Dest = document
     Accept-Language = en-US,en;q=0.5
 ```
-### client overview
+### client defaults
 ```
 fuzzyHelpers provides a client with the following customized defaults
     MaxIdleConnsPerHost = 30
@@ -91,7 +93,7 @@ fuzzyHelpers provides a client with the following customized defaults
                         return http.ErrUseLastResponse
                     }
 ```
-### user-supplied options
+### possible user-supplied options
 ```
 header options:
   WithOS
@@ -127,4 +129,4 @@ client options
         measured in ms
 ```
 ### note
-Go unfortunately doesn't preserve header order, so if that's important to you and what you're up to, you'll need to look elsewhere. 
+Go unfortunately doesn't preserve header order, so if that's important to you and what you're up to, you'll need to look elsewhere. Think of these headers as a starting point -- certainly better than nothing, but not a magic bullet.
